@@ -1,23 +1,35 @@
-# sasrec/baseline/trainer.py
 import torch
-import torch.nn.functional as F
-from tqdm import tqdm
+import torch.nn as nn
+import torch.optim as optim
+from utils import sample_negative
 
-def train(model, dataloader, optimizer, device):
+def train(model, dataloader, device, epochs=10, lr=0.001, neg_samples=1):
     model.train()
-    total_loss = 0
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
-    for batch in tqdm(dataloader):
-        seqs, labels = batch
-        seqs, labels = seqs.to(device), labels.to(device)
+    for epoch in range(epochs):
+        total_loss = 0
+        for batch in dataloader:
+            input_seq, pos_items = batch
+            input_seq = input_seq.to(device)
+            pos_items = pos_items.to(device)
 
-        optimizer.zero_grad()
-        output = model(seqs)
-        logits = output[:, -1, :]  # 只看最后一个位置
-        loss = F.cross_entropy(logits, labels)
-        loss.backward()
-        optimizer.step()
+            # Sample negative items for each positive item
+            neg_items = sample_negative(pos_items, model.num_items, device, neg_samples)
 
-        total_loss += loss.item()
+            # Concatenate positive and negative items for loss computation
+            # The shape of logits is [B, 1 + neg_samples]
+            logits = model(input_seq, torch.cat([pos_items.unsqueeze(1), neg_items], dim=1))
 
-    return total_loss / len(dataloader)
+            # The positive item is always at index 0
+            labels = torch.zeros(logits.size(0), dtype=torch.long).to(device)
+            loss = criterion(logits, labels)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+        print(f"Epoch {epoch + 1}/{epochs} | Loss: {total_loss / len(dataloader):.4f}")

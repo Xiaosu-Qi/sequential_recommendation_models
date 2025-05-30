@@ -1,33 +1,55 @@
-# sasrec/baseline/demo.py
 import torch
+from torch.utils.data import DataLoader
+
 from model import SASRec
 from trainer import train
-from torch.utils.data import DataLoader, TensorDataset
-import argparse
+from utils import sample_negative
+from evaluate import evaluate
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--hidden_units', type=int, default=64)
-    parser.add_argument('--max_seq_len', type=int, default=50)
-    parser.add_argument('--num_heads', type=int, default=2)
-    parser.add_argument('--num_blocks', type=int, default=2)
-    parser.add_argument('--dropout_rate', type=float, default=0.2)
-    return parser.parse_args()
+num_users = 1000
+num_items = 5000
+max_seq_len = 50
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def main():
-    args = get_args()
-    model = SASRec(user_num=100, item_num=500, args=args)
-    model = model.to('cuda' if torch.cuda.is_available() else 'cpu')
+def generate_dummy_dataset(num_users=1000, max_len=50):
+    import random
+    dataset = []
+    for _ in range(num_users):
+        seq_len = random.randint(5, max_len)
+        user_seq = [random.randint(1, num_items - 1) for _ in range(seq_len)]
+        target = user_seq[-1]
+        input_seq = user_seq[:-1]
+        dataset.append((input_seq, target))
+    return dataset
 
-    # random data test
-    dummy_seq = torch.randint(1, 500, (1000, args.max_seq_len))
-    dummy_label = torch.randint(1, 500, (1000,))
-    dataset = TensorDataset(dummy_seq, dummy_label)
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+class DummyDataset(torch.utils.data.Dataset):
+    def __init__(self, data, max_len):
+        self.data = data
+        self.max_len = max_len
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    avg_loss = train(model, dataloader, optimizer, device=model.device)
-    print(f"Training loss: {avg_loss:.4f}")
+    def __len__(self):
+        return len(self.data)
 
-if __name__ == "__main__":
-    main()
+    def __getitem__(self, idx):
+        input_seq, target = self.data[idx]
+        pad_len = self.max_len - len(input_seq)
+        input_seq = [0] * pad_len + input_seq[-self.max_len:]
+        return torch.tensor(input_seq), torch.tensor(target)
+
+# Generate dummy dataset
+train_data = generate_dummy_dataset(num_users=800)
+test_data = generate_dummy_dataset(num_users=200)
+
+train_loader = DataLoader(DummyDataset(train_data, max_seq_len), batch_size=64, shuffle=True)
+test_loader = DataLoader(DummyDataset(test_data, max_seq_len), batch_size=64, shuffle=False)
+
+# Initialize model
+model = SASRec(num_users=num_users, num_items=num_items, max_seq_len=max_seq_len, hidden_units=64, num_heads=2, num_blocks=2, dropout_rate=0.2)
+model = model.to(device)
+
+# Train
+train(model, train_loader, device, epochs=5)
+
+# Evaluate
+hit, ndcg = evaluate(model, test_loader, device)
+print(f"Hit@10: {hit:.4f}, NDCG@10: {ndcg:.4f}")
