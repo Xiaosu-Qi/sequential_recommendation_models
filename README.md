@@ -22,38 +22,31 @@ Sequential recommenders aim to predict the **next item** a user will interact wi
 - Self-Attention (Transformers)
 
 ## 🏗️ Repo Structure
-sequential-recommendation-models/
-│
-├── sasrec/                             # 📄 SASRec (Self-Attentive Sequential Recommendation)
-│   ├── baseline/                       # Original SASRec implementation
-│   │   ├── model.py
-│   │   ├── trainer.py
-│   │   └── demo.py
-│   │
-│   ├── sasrec+time/                    # Time-aware SASRec variant (example)
-│   │   ├── model.py
-│   │   ├── trainer.py
-│   │   └── README.md                   # Explains the modification or paper background
-│   │
-│   ├── sasrec+contrastive/            # Contrastive learning enhanced variant (example)
-│       ├── model.py
-│       ├── trainer.py
-│       └── README.md
-│
-├── bert4rec/                           # BERT4Rec implementation (coming soon)
-│   └── ...
-│
-├── data/                               # Sample datasets and preprocessors
-│   └── ml-1m/
-│
-├── common/                             # Shared utilities and layers
-│   ├── dataloader.py
-│   ├── layers.py
-│   └── config.py
-│
-├── main.py                             # 🚀 Entry script to run different models
-├── requirements.txt                    # 📦 Python dependencies
-└── README.md                           # 📝 Project description (you’re reading it!)
+This repo contains multiple implementations and variants of the SASRec (Self-Attentive Sequential Recommendation) model, along with utilities and shared components. Here's a quick overview of how things are organized:
+- `sasrec/`  
+  The main folder for SASRec and its variants.
+
+  - `baseline/`  
+    A faithful reimplementation of the original SASRec paper. Includes:
+    - `model.py`: Transformer-based SASRec model
+    - `trainer.py`: Basic training loop with cross-entropy loss
+    - `demo.py`: Simple script to run the model end-to-end with dummy data
+
+  - `sasrec+time/`  
+    A time-aware version of SASRec that adds time interval embeddings to the input. Useful for modeling temporal gaps between interactions.
+
+  - `sasrec+contrastive/` *(TBD)*  
+    A planned variant that adds contrastive learning to help with user representation learning. Coming soon.
+
+- `bert4rec/`  
+  Placeholder for a BERT4Rec implementation using masked language modeling.
+
+- `requirements.txt`  
+  List of Python dependencies.
+
+- `README.md`  
+  You’re reading it!
+
 
 ## 🛠️ Installation
 
